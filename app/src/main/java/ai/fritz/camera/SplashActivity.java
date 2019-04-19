@@ -1,20 +1,63 @@
 package ai.fritz.camera;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import com.ibm.watson.developer_cloud.android.library.audio.MicrophoneHelper;
+import com.ibm.watson.developer_cloud.android.library.audio.MicrophoneInputStream;
+import com.ibm.watson.developer_cloud.android.library.audio.utils.ContentType;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.SpeechToText;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.model.RecognizeOptions;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechRecognitionResults;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeCallback;
+
+import java.io.InputStream;
 
 public class SplashActivity extends AppCompatActivity {
 
     private static final int SPLASH_TIME_OUT = 5000;
+    private Button btnRecord;
+    private boolean permissionToRecordAccepted = false;
+    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    private static String TAG = "SplashActivity";
+    private static final int RECORD_REQUEST_CODE = 101;
+    private SpeechToText speechService;
+    private MicrophoneInputStream capture;
+    private MicrophoneHelper microphoneHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+        btnRecord= findViewById(R.id.btn_record);
+        microphoneHelper = new MicrophoneHelper(this);
 
-        Handler handler = new Handler();
+
+        int permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            Log.i(TAG, "Permission to record denied");
+            makeRequest();
+        }
+
+        Toast.makeText(SplashActivity.this,"Say something, move to the next!", Toast.LENGTH_LONG).show();
+
+        listenToSpeech();
+
+        /*Handler handler = new Handler();
         handler.postDelayed(new Runnable(){
             @Override
             public void run(){
@@ -22,6 +65,161 @@ public class SplashActivity extends AppCompatActivity {
                 startActivity(intent);
                 finish();
             }
-            },SPLASH_TIME_OUT);
+            },SPLASH_TIME_OUT);*/
     }
+
+    // Speech to Text Record Audio permission
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode){
+            case REQUEST_RECORD_AUDIO_PERMISSION:
+                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                break;
+            case RECORD_REQUEST_CODE: {
+
+                if (grantResults.length == 0
+                        || grantResults[0] !=
+                        PackageManager.PERMISSION_GRANTED) {
+
+                    Log.i(TAG, "Permission has been denied by user");
+                } else {
+                    Log.i(TAG, "Permission has been granted by user");
+                }
+                return;
+            }
+            case MicrophoneHelper.REQUEST_PERMISSION: {
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Permission to record audio denied", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+        // if (!permissionToRecordAccepted ) finish();
+
+    }
+
+    protected void makeRequest() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                MicrophoneHelper.REQUEST_PERMISSION);
+    }
+
+    //Record a message via Watson Speech to Text
+    private void listenToSpeech() {
+        speechService = new SpeechToText();
+        //Use "apikey" as username and apikey as your password
+        speechService.setUsernameAndPassword("apikey", "yMqRs0JnVgzI4y83v6D6mk9peAM11N8-4syjI5nkYu60");
+        //Default: https://stream.watsonplatform.net/text-to-speech/api
+        speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
+
+        capture = microphoneHelper.getInputStream(true);
+
+        Log.d("tag", "listen to speech");
+
+        Thread voiceThread = new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
+                } catch (Exception e) {
+                    showError(e);
+                }
+            }
+        });
+
+        voiceThread.start();
+
+        /*try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        //voiceThread.interrupt();
+        Log.d("tag", "Called Interrupt");*/
+
+    }
+
+    //Private Methods - Speech to Text
+    private RecognizeOptions getRecognizeOptions(InputStream audio) {
+        return new RecognizeOptions.Builder()
+                .audio(audio)
+                .contentType(ContentType.OPUS.toString())
+                .model("en-US_BroadbandModel")
+                .interimResults(true)
+                .inactivityTimeout(2000)
+                //TODO: Uncomment this to enable Speaker Diarization
+                //.speakerLabels(true)
+                .build();
+    }
+
+    private class MicrophoneRecognizeDelegate extends BaseRecognizeCallback {
+
+        @Override
+        public void onTranscription(SpeechRecognitionResults speechResults) {
+            System.out.println(speechResults);
+
+            if(speechResults.getResults() != null && !speechResults.getResults().isEmpty()) {
+                String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
+                Log.d("tag", text);
+                welcomeToMainActivity();
+            }
+        }
+
+        @Override public void onConnected() {
+
+        }
+
+        @Override public void onError(Exception e) {
+            showError(e);
+            enableMicButton();
+        }
+
+        @Override public void onDisconnected() {
+            enableMicButton();
+        }
+
+        @Override
+        public void onInactivityTimeout(RuntimeException runtimeException) {
+
+        }
+
+        @Override
+        public void onListening() {
+
+        }
+
+        @Override
+        public void onTranscriptionComplete() {
+
+        }
+    }
+
+    private void welcomeToMainActivity() {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+                startActivity(intent);
+                finish();
+            }
+        });
+
+    }
+
+    private void enableMicButton() {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                btnRecord.setEnabled(true);
+            }
+        });
+    }
+
+    private void showError(final Exception e) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                Toast.makeText(SplashActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
+            }
+        });
+    }
+
 }

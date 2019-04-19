@@ -6,20 +6,25 @@ import android.content.Intent;
 import android.graphics.Canvas;
 import android.media.Image;
 import android.media.ImageReader;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
 import android.widget.TextView;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+import android.net.Uri;
 
 
-import com.microsoft.cognitiveservices.speech.ResultReason;
-import com.microsoft.cognitiveservices.speech.SpeechConfig;
-import com.microsoft.cognitiveservices.speech.SpeechRecognitionResult;
-import com.microsoft.cognitiveservices.speech.SpeechRecognizer;
-
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -35,8 +40,14 @@ import ai.fritz.vision.objectdetection.FritzVisionObjectPredictor;
 import ai.fritz.vision.objectdetection.FritzVisionObjectPredictorOptions;
 import ai.fritz.vision.objectdetection.FritzVisionObjectResult;
 
-import static android.Manifest.permission.INTERNET;
-import static android.Manifest.permission.RECORD_AUDIO;
+import com.ibm.watson.developer_cloud.android.library.audio.MicrophoneHelper;
+import com.ibm.watson.developer_cloud.android.library.audio.MicrophoneInputStream;
+import com.ibm.watson.developer_cloud.android.library.audio.utils.ContentType;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.SpeechToText;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.model.RecognizeOptions;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.model.SpeechRecognitionResults;
+import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeCallback;
+
 
 
 public class MainActivity extends BaseCameraActivity implements ImageReader.OnImageAvailableListener {
@@ -54,9 +65,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     private int imageRotation;
     private Intent customModelIntent;
 
-    private static String speechSubscriptionKey = "75e2f2cf3bda44c0b7a43ea56ed89cb3";
-    private static String serviceRegion = "westus";
-
 
     private int object = -1;
     private AlertDialog alert;
@@ -65,9 +73,29 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     private Boolean empty = true;
     private ArrayList<String> listOfObjects = new ArrayList<String>();
 
+    private TextView inputMessage;
+    private Button btnRecord;
+    private boolean permissionToRecordAccepted = false;
+    private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
+    private static final int RECORD_REQUEST_CODE = 101;
+    private SpeechToText speechService;
+    private MicrophoneInputStream capture;
+    private MicrophoneHelper microphoneHelper;
+
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        inputMessage = findViewById(R.id.message);
+        btnRecord= findViewById(R.id.btn_record);
+        microphoneHelper = new MicrophoneHelper(this);
+
+        int permission = ContextCompat.checkSelfPermission(this,
+                Manifest.permission.RECORD_AUDIO);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            Log.i(TAG, "Permission to record denied");
+            makeRequest();
+        }
 
         // Initialize Fritz
         Fritz.configure(this,"c8df3628771648f2960de5e3fca29053");
@@ -79,7 +107,11 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         // ----------------------------------------------
         // END STEP 1
 
-        //ActivityCompat.requestPermissions(MainActivity.this, new String[]{RECORD_AUDIO, INTERNET}, requestCode);
+        btnRecord.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                listenToSpeech();
+            }
+        });
 
     }
 
@@ -137,17 +169,15 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                                 }
                             }
 
-                            if (!(label.getText().equals("TextView")) && dup == false && empty == true) {
+                            if (!(label.getText().equals("")) && dup == false && empty == true) {
                                 listOfObjects.add(label.getText()+"");
                                 empty = false;
 
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                            builder.setMessage("Is " + label.getText().toString() + " the correct object? Please say outloud yes or no")
-                                    .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                            builder.setMessage("Is " + label.getText().toString() + " the correct object? Please say outloud yes or no");
+                                    /*.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
                                             // FIRE ZE MISSILES!
-//                                            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://team34backend.azurewebsites.net/" + label.getText() + ".pdf"));
-//                                            startActivity(browserIntent);
                                         }
                                     })
                                     .setNegativeButton("No", new DialogInterface.OnClickListener() {
@@ -155,14 +185,13 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                                             // User cancelled the dialog
                                             empty = true;
                                         }
-                                    });
+                                    });*/
 
                             alert = builder.create();
                             alert.show();
 
                             listenToSpeech();
 
-                            //alert.dismiss();
 
                         }
 
@@ -175,66 +204,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
 
                         }
                 });
-    }
-
-    private void listenToSpeech() {
-        TextView txt = (TextView) this.findViewById(R.id.showText);
-
-        Log.d("tag","listen to speech");
-
-        try {
-            SpeechConfig config = SpeechConfig.fromSubscription(speechSubscriptionKey, serviceRegion);
-            assert(config != null);
-
-            SpeechRecognizer reco = new SpeechRecognizer(config);
-            assert(reco != null);
-
-            Future<SpeechRecognitionResult> task = reco.recognizeOnceAsync();
-            assert(task != null);
-
-            // Note: this will block the UI thread
-            SpeechRecognitionResult result = task.get();
-            assert(result != null);
-            Log.d("tag",result.toString() + " this is result");
-
-            if (result.getReason() == ResultReason.RecognizedSpeech) {
-                String output_result = result.toString();
-
-                String answer = "";
-                for (int i = output_result.length()-4; i > 0; i--){
-                    if(output_result.charAt(i) != '<'){
-                        answer = output_result.charAt(i) + answer;
-                    }else {
-                        break;
-                    }
-                }
-                Log.d("tag", answer);
-                answer.toLowerCase();
-
-
-                if (answer.contains("yes")){
-                    // Add code to pull up corresponding instruction
-                    alert.dismiss();
-                    txt.setText("Pop up pdf!");
-
-                    //Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://team34backend.azurewebsites.net/" + label.getText() + ".pdf"));
-                    //startActivity(browserIntent);
-
-                }else if (answer.contains("no")) {
-                    alert.dismiss();
-                    // Go back and restart detecting objects
-                }
-            }
-            else {
-                txt.setText("Try again.");
-            }
-            Log.d("tag",txt.getText()+"");
-
-            reco.close();
-        } catch (Exception ex) {
-            Log.e("SpeechSDKDemo", "unexpected " + ex.getMessage());
-            assert(false);
-        }
     }
 
     @Override
@@ -273,6 +242,164 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                         computing.set(false);
                     }
                 });
+    }
+
+    // Speech to Text Record Audio permission
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode){
+            case REQUEST_RECORD_AUDIO_PERMISSION:
+                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                break;
+            case RECORD_REQUEST_CODE: {
+
+                if (grantResults.length == 0
+                        || grantResults[0] !=
+                        PackageManager.PERMISSION_GRANTED) {
+
+                    Log.i(TAG, "Permission has been denied by user");
+                } else {
+                    Log.i(TAG, "Permission has been granted by user");
+                }
+                return;
+            }
+            case MicrophoneHelper.REQUEST_PERMISSION: {
+                if (grantResults.length > 0 && grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Permission to record audio denied", Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+        // if (!permissionToRecordAccepted ) finish();
+
+    }
+
+    protected void makeRequest() {
+        ActivityCompat.requestPermissions(this,
+                new String[]{Manifest.permission.RECORD_AUDIO},
+                MicrophoneHelper.REQUEST_PERMISSION);
+    }
+
+    //Record a message via Watson Speech to Text
+    private void listenToSpeech() {
+        speechService = new SpeechToText();
+        //Use "apikey" as username and apikey as your password
+        speechService.setUsernameAndPassword("apikey", "yMqRs0JnVgzI4y83v6D6mk9peAM11N8-4syjI5nkYu60");
+        //Default: https://stream.watsonplatform.net/text-to-speech/api
+        speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
+
+        capture = microphoneHelper.getInputStream(true);
+        Log.d("tag","listen to speech");
+
+        Toast.makeText(MainActivity.this,"Listening...", Toast.LENGTH_LONG).show();
+
+        new Thread(new Runnable() {
+            @Override public void run() {
+                try {
+                    speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
+                } catch (Exception e) {
+                    showError(e);
+                }
+            }
+        }).start();
+
+        Handler handler = new Handler();
+        handler.postDelayed(new Runnable(){
+            @Override
+            public void run(){
+                try {
+                    microphoneHelper.closeInputStream();
+//                    Toast.makeText(MainActivity.this,"Listening Stopped...", Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        },8000);
+
+    }
+
+    //Private Methods - Speech to Text
+    private RecognizeOptions getRecognizeOptions(InputStream audio) {
+        return new RecognizeOptions.Builder()
+                .audio(audio)
+                .contentType(ContentType.OPUS.toString())
+                .model("en-US_BroadbandModel")
+                .interimResults(true)
+                .inactivityTimeout(2000)
+                //TODO: Uncomment this to enable Speaker Diarization
+                //.speakerLabels(true)
+                .build();
+    }
+
+    private class MicrophoneRecognizeDelegate extends BaseRecognizeCallback {
+
+        @Override
+        public void onTranscription(SpeechRecognitionResults speechResults) {
+            System.out.println(speechResults);
+
+            if(speechResults.getResults() != null && !speechResults.getResults().isEmpty()) {
+                String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
+                Log.d("tag", text);
+                if (text.toLowerCase().contains("yes")){
+                    alert.dismiss();
+                    // Replace the following line with methods to pull up PDF
+                    showMicText("open up pdf");
+                    // Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://team34backend.azurewebsites.net/" + label.getText() + ".pdf"));
+                    // startActivity(browserIntent);
+                }else if (text.toLowerCase().contains("no")){
+                    alert.dismiss();
+                }else {
+                    alert.dismiss();
+                    showToast("Tap the buttom to try again");
+                }
+            }
+        }
+
+        @Override public void onConnected() {
+
+        }
+
+
+        @Override
+        public void onInactivityTimeout(RuntimeException runtimeException) {
+
+        }
+
+        @Override
+        public void onListening() {
+
+        }
+
+        @Override
+        public void onTranscriptionComplete() {
+
+        }
+    }
+
+    private void showMicText(final String text) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                inputMessage.setText(text);
+            }
+        });
+    }
+
+    private void showToast(final String message) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                Toast.makeText(MainActivity.this,message, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+
+    private void showError(final Exception e) {
+        runOnUiThread(new Runnable() {
+            @Override public void run() {
+                Toast.makeText(MainActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                e.printStackTrace();
+            }
+        });
     }
 
 

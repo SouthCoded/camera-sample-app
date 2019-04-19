@@ -19,8 +19,6 @@ allprojects {
     repositories {
         google()
         jcenter()
-        // ADD FOR MICROSOFT SPEECH API DEPENDENCIES
-        maven { url 'https://csspeechstorage.blob.core.windows.net/maven/' }
         // ADD FOR FRITZ DEPENDENCIES
         maven { url 'https://raw.github.com/fritzlabs/fritz-repository/master' }
     }
