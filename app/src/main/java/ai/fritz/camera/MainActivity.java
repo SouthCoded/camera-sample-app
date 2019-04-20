@@ -289,7 +289,7 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 
         capture = microphoneHelper.getInputStream(true);
-        Log.d("tag","listen to speech");
+        Log.d("tag","listen to speech main");
 
         Toast.makeText(MainActivity.this,"Listening...", Toast.LENGTH_LONG).show();
 
@@ -348,6 +348,7 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                     // startActivity(browserIntent);
                 }else if (text.toLowerCase().contains("no")){
                     alert.dismiss();
+                    microphoneHelper.closeInputStream();
                 }else {
                     alert.dismiss();
                     showToast("Tap the buttom to try again");

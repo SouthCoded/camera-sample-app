@@ -28,7 +28,6 @@ import java.io.InputStream;
 public class SplashActivity extends AppCompatActivity {
 
     private static final int SPLASH_TIME_OUT = 5000;
-    private Button btnRecord;
     private boolean permissionToRecordAccepted = false;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static String TAG = "SplashActivity";
@@ -37,11 +36,11 @@ public class SplashActivity extends AppCompatActivity {
     private MicrophoneInputStream capture;
     private MicrophoneHelper microphoneHelper;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
-        btnRecord= findViewById(R.id.btn_record);
         microphoneHelper = new MicrophoneHelper(this);
 
 
@@ -112,30 +111,21 @@ public class SplashActivity extends AppCompatActivity {
         //Default: https://stream.watsonplatform.net/text-to-speech/api
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 
-        capture = microphoneHelper.getInputStream(true);
+            capture = microphoneHelper.getInputStream(true);
 
-        Log.d("tag", "listen to speech");
+            Log.d("tag", "listen to speech splash");
 
-        Thread voiceThread = new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
-                } catch (Exception e) {
-                    showError(e);
+            final Thread voiceThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
+                    } catch (Exception e) {
+                        showError(e);
+                    }
                 }
-            }
-        });
-
-        voiceThread.start();
-
-        /*try {
-            Thread.sleep(5000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        //voiceThread.interrupt();
-        Log.d("tag", "Called Interrupt");*/
+            });
+            voiceThread.start();
 
     }
 
@@ -156,12 +146,14 @@ public class SplashActivity extends AppCompatActivity {
 
         @Override
         public void onTranscription(SpeechRecognitionResults speechResults) {
-            System.out.println(speechResults);
 
             if(speechResults.getResults() != null && !speechResults.getResults().isEmpty()) {
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
-                welcomeToMainActivity();
+                if (text.toLowerCase().contains("next")){
+                    microphoneHelper.closeInputStream();
+                    welcomeToMainActivity();
+                }
             }
         }
 
@@ -171,11 +163,9 @@ public class SplashActivity extends AppCompatActivity {
 
         @Override public void onError(Exception e) {
             showError(e);
-            enableMicButton();
         }
 
         @Override public void onDisconnected() {
-            enableMicButton();
         }
 
         @Override
@@ -195,23 +185,12 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void welcomeToMainActivity() {
-        runOnUiThread(new Runnable() {
-            @Override public void run() {
-                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                startActivity(intent);
-                finish();
-            }
-        });
-
+        Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+        finish();
+        startActivity(intent);
     }
 
-    private void enableMicButton() {
-        runOnUiThread(new Runnable() {
-            @Override public void run() {
-                btnRecord.setEnabled(true);
-            }
-        });
-    }
+
 
     private void showError(final Exception e) {
         runOnUiThread(new Runnable() {
