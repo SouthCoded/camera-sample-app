@@ -27,7 +27,6 @@ import java.io.InputStream;
 
 public class SplashActivity extends AppCompatActivity {
 
-    private static final int SPLASH_TIME_OUT = 5000;
     private boolean permissionToRecordAccepted = false;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static String TAG = "SplashActivity";
@@ -52,19 +51,8 @@ public class SplashActivity extends AppCompatActivity {
             makeRequest();
         }
 
-        Toast.makeText(SplashActivity.this,"Say something, move to the next!", Toast.LENGTH_LONG).show();
-
         listenToSpeech();
 
-        /*Handler handler = new Handler();
-        handler.postDelayed(new Runnable(){
-            @Override
-            public void run(){
-                Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-                startActivity(intent);
-                finish();
-            }
-            },SPLASH_TIME_OUT);*/
     }
 
     // Speech to Text Record Audio permission
@@ -113,9 +101,9 @@ public class SplashActivity extends AppCompatActivity {
 
             capture = microphoneHelper.getInputStream(true);
 
-            Log.d("tag", "listen to speech splash");
+            Log.d("tag", "Listen to speech in SplashActivity");
 
-            final Thread voiceThread = new Thread(new Runnable() {
+            new Thread(new Runnable() {
                 @Override
                 public void run() {
                     try {
@@ -124,9 +112,7 @@ public class SplashActivity extends AppCompatActivity {
                         showError(e);
                     }
                 }
-            });
-            voiceThread.start();
-
+            }).start();
     }
 
     //Private Methods - Speech to Text
@@ -189,8 +175,6 @@ public class SplashActivity extends AppCompatActivity {
         finish();
         startActivity(intent);
     }
-
-
 
     private void showError(final Exception e) {
         runOnUiThread(new Runnable() {

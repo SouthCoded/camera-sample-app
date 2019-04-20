@@ -74,7 +74,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     private ArrayList<String> listOfObjects = new ArrayList<String>();
 
     private TextView inputMessage;
-    private Button btnRecord;
     private boolean permissionToRecordAccepted = false;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
     private static final int RECORD_REQUEST_CODE = 101;
@@ -86,7 +85,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         inputMessage = findViewById(R.id.message);
-        btnRecord= findViewById(R.id.btn_record);
         microphoneHelper = new MicrophoneHelper(this);
 
         int permission = ContextCompat.checkSelfPermission(this,
@@ -106,12 +104,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         classifier = new CustomTFLiteClassifier(this);
         // ----------------------------------------------
         // END STEP 1
-
-        btnRecord.setOnClickListener(new View.OnClickListener() {
-            @Override public void onClick(View v) {
-                listenToSpeech();
-            }
-        });
 
     }
 
@@ -175,23 +167,11 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
 
                             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                             builder.setMessage("Is " + label.getText().toString() + " the correct object? Please say outloud yes or no");
-                                    /*.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int id) {
-                                            // FIRE ZE MISSILES!
-                                        }
-                                    })
-                                    .setNegativeButton("No", new DialogInterface.OnClickListener() {
-                                        public void onClick(DialogInterface dialog, int id) {
-                                            // User cancelled the dialog
-                                            empty = true;
-                                        }
-                                    });*/
 
                             alert = builder.create();
                             alert.show();
 
                             listenToSpeech();
-
 
                         }
 
@@ -289,7 +269,7 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 
         capture = microphoneHelper.getInputStream(true);
-        Log.d("tag","listen to speech main");
+        Log.d("tag","Listen to speech in MainActicvity");
 
         Toast.makeText(MainActivity.this,"Listening...", Toast.LENGTH_LONG).show();
 
@@ -302,19 +282,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                 }
             }
         }).start();
-
-        Handler handler = new Handler();
-        handler.postDelayed(new Runnable(){
-            @Override
-            public void run(){
-                try {
-                    microphoneHelper.closeInputStream();
-//                    Toast.makeText(MainActivity.this,"Listening Stopped...", Toast.LENGTH_LONG).show();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        },8000);
 
     }
 
@@ -341,25 +308,33 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
                 if (text.toLowerCase().contains("yes")){
-                    alert.dismiss();
+
                     // Replace the following line with methods to pull up PDF
-                    showMicText("open up pdf");
+                       showMicText("open up pdf");
                     // Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://team34backend.azurewebsites.net/" + label.getText() + ".pdf"));
                     // startActivity(browserIntent);
+
+                    listOfObjects.clear();
+                    alert.dismiss();
+                    empty = true;
+                    microphoneHelper.closeInputStream();
+                    showToast("Listening Stopped...");
+
                 }else if (text.toLowerCase().contains("no")){
                     alert.dismiss();
+                    empty = true;
                     microphoneHelper.closeInputStream();
+                    showToast("Listening Stopped...");
                 }else {
-                    alert.dismiss();
-                    showToast("Tap the buttom to try again");
+                    showToast("Sorry, I didn't catch it. Please say again!");
                 }
             }
         }
 
+
         @Override public void onConnected() {
 
         }
-
 
         @Override
         public void onInactivityTimeout(RuntimeException runtimeException) {
@@ -393,7 +368,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         });
     }
 
-
     private void showError(final Exception e) {
         runOnUiThread(new Runnable() {
             @Override public void run() {
@@ -402,6 +376,4 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
             }
         });
     }
-
-
 }
