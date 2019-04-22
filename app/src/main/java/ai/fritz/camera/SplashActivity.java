@@ -136,6 +136,7 @@ public class SplashActivity extends AppCompatActivity {
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
                 if (text.toLowerCase().contains("next")){
+
                     microphoneHelper.closeInputStream();
                     welcomeToMainActivity();
                 }
