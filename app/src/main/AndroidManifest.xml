@@ -27,6 +27,8 @@
         </activity>
 
         <activity android:name=".MainActivity"/>
+        <activity android:name=".pdf"/>
+
 
         <meta-data
             android:name="fritz_api_key"

@@ -52,7 +52,6 @@ public class SplashActivity extends AppCompatActivity {
         }
 
         listenToSpeech();
-
     }
 
     // Speech to Text Record Audio permission
@@ -95,7 +94,7 @@ public class SplashActivity extends AppCompatActivity {
     private void listenToSpeech() {
         speechService = new SpeechToText();
         //Use "apikey" as username and apikey as your password
-        speechService.setUsernameAndPassword("apikey", "yMqRs0JnVgzI4y83v6D6mk9peAM11N8-4syjI5nkYu60");
+        speechService.setUsernameAndPassword("apikey", "lRU9TpbvfY8Z5Jpcg4MXx3cpnYMcWNrlhlAyf5PZ4ott");
         //Default: https://stream.watsonplatform.net/text-to-speech/api
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 

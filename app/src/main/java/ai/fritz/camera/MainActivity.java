@@ -264,7 +264,7 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     private void listenToSpeech() {
         speechService = new SpeechToText();
         //Use "apikey" as username and apikey as your password
-        speechService.setUsernameAndPassword("apikey", "yMqRs0JnVgzI4y83v6D6mk9peAM11N8-4syjI5nkYu60");
+        speechService.setUsernameAndPassword("apikey", "lRU9TpbvfY8Z5Jpcg4MXx3cpnYMcWNrlhlAyf5PZ4ott");
         //Default: https://stream.watsonplatform.net/text-to-speech/api
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 
@@ -310,9 +310,9 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                 if (text.toLowerCase().contains("yes")){
 
                     // Replace the following line with methods to pull up PDF
-                       showMicText("open up pdf");
-                    // Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://team34backend.azurewebsites.net/" + label.getText() + ".pdf"));
-                    // startActivity(browserIntent);
+                    Intent intent = new Intent(MainActivity.this, pdf.class);
+                    finish();
+                    startActivity(intent);
 
                     listOfObjects.clear();
                     alert.dismiss();

@@ -19,7 +19,7 @@
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="223dp"
+        android:layout_marginTop="164dp"
         android:gravity="center_vertical"
         android:text="Welcome to Team 34 AR App"
         android:textColor="@android:color/holo_purple"
@@ -31,15 +31,33 @@
         android:layout_height="wrap_content"
         android:layout_alignParentStart="true"
         android:layout_alignParentTop="true"
-        android:layout_marginStart="208dp"
-        android:layout_marginLeft="50dp"
-        android:layout_marginTop="278dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="109dp"
+        android:layout_marginLeft="100dp"
+        android:layout_marginTop="209dp"
         android:layout_marginRight="50dp"
         android:gravity="center_vertical"
-        android:text='"Say NEXT, move to the next!"'
+        android:text='"Say NEXT to skip"'
         android:textAlignment="center"
-        android:textSize="20dp"
-        android:textColor="@android:color/holo_purple" />
+        android:textColor="@android:color/holo_purple"
+        android:textSize="20dp" />
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginStart="0dp"
+        android:layout_marginLeft="50dp"
+        android:layout_marginTop="249dp"
+        android:layout_marginRight="50dp"
+        android:gravity="center_horizontal"
+        android:text="Look at the object. A dialog will pop up once your object is successfully detected, which asks if it's the right object. Please say YES or NO to preceed. YES : Pulls up the corresponding instruction. NO: Attempts to find other objects"
+        android:textAlignment="center"
+        android:textColor="@android:color/holo_purple"
+        android:textSize="15dp" />
 
 
 </RelativeLayout>
