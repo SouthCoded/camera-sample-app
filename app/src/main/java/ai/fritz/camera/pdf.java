@@ -137,8 +137,6 @@ public class pdf extends Activity implements OnPageChangeListener,OnLoadComplete
                 }
             }
         }
-        // if (!permissionToRecordAccepted ) finish();
-
     }
 
     protected void makeRequest() {
@@ -169,6 +167,9 @@ public class pdf extends Activity implements OnPageChangeListener,OnLoadComplete
                 }
             }
         }).start();
+
+        Toast.makeText(this, "Say 'go back', skip to home page.", Toast.LENGTH_SHORT).show();
+
     }
 
     //Private Methods - Speech to Text
@@ -194,7 +195,7 @@ public class pdf extends Activity implements OnPageChangeListener,OnLoadComplete
                 Log.d("tag", text);
                 if (text.toLowerCase().contains("back")){
                     microphoneHelper.closeInputStream();
-                    welcomeToMainActivity();
+                    backToMainActivity();
                 }
             }
         }
@@ -226,10 +227,10 @@ public class pdf extends Activity implements OnPageChangeListener,OnLoadComplete
         }
     }
 
-    private void welcomeToMainActivity() {
+    private void backToMainActivity() {
         Intent intent = new Intent(pdf.this, MainActivity.class);
-        finish();
         startActivity(intent);
+        finish();
     }
 
     private void showError(final Exception e) {

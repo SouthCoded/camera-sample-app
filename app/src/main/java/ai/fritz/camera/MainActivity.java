@@ -228,9 +228,9 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode){
+        switch (requestCode) {
             case REQUEST_RECORD_AUDIO_PERMISSION:
-                permissionToRecordAccepted  = grantResults[0] == PackageManager.PERMISSION_GRANTED;
+                permissionToRecordAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
                 break;
             case RECORD_REQUEST_CODE: {
 
@@ -250,8 +250,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                 }
             }
         }
-        // if (!permissionToRecordAccepted ) finish();
-
     }
 
     protected void makeRequest() {
@@ -308,23 +306,22 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
                 if (text.toLowerCase().contains("yes")){
-
+                    microphoneHelper.closeInputStream();
                     // Replace the following line with methods to pull up PDF
                     Intent intent = new Intent(MainActivity.this, pdf.class);
-                    finish();
                     startActivity(intent);
-
+                    finish();
                     listOfObjects.clear();
                     alert.dismiss();
                     empty = true;
-                    microphoneHelper.closeInputStream();
-                    showToast("Listening Stopped...");
+
+                    //showToast("Listening Stopped...");
 
                 }else if (text.toLowerCase().contains("no")){
+                    microphoneHelper.closeInputStream();
                     alert.dismiss();
                     empty = true;
-                    microphoneHelper.closeInputStream();
-                    showToast("Listening Stopped...");
+                    //showToast("Listening Stopped...");
                 }else {
                     showToast("Sorry, I didn't catch it. Please say again!");
                 }
@@ -350,14 +347,6 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
         public void onTranscriptionComplete() {
 
         }
-    }
-
-    private void showMicText(final String text) {
-        runOnUiThread(new Runnable() {
-            @Override public void run() {
-                inputMessage.setText(text);
-            }
-        });
     }
 
     private void showToast(final String message) {
