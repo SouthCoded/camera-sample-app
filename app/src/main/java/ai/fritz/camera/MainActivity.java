@@ -305,11 +305,26 @@ public class MainActivity extends BaseCameraActivity implements ImageReader.OnIm
             if(speechResults.getResults() != null && !speechResults.getResults().isEmpty()) {
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
+
                 if (text.toLowerCase().contains("yes")){
                     microphoneHelper.closeInputStream();
-                    // Replace the following line with methods to pull up PDF
-                    Intent intent = new Intent(MainActivity.this, pdf.class);
-                    startActivity(intent);
+
+                    int last = listOfObjects.size()-1;
+                    switch (listOfObjects.get(last)) {
+                        case "Blender Bottle":
+                            startActivity(new Intent(MainActivity.this, BottleActivity.class));
+                            break;
+                        case "Gloves":
+                            startActivity(new Intent(MainActivity.this, GlovesActivity.class));
+                            break;
+                        case "Remote Controller":
+                            startActivity(new Intent(MainActivity.this, pdf.class));
+                            break;
+                        case "Vigileo Monitor":
+                            startActivity(new Intent(MainActivity.this, MonitorActivity.class));
+                            break;
+                    }
+
                     finish();
                     listOfObjects.clear();
                     alert.dismiss();

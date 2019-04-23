@@ -1,5 +1,14 @@
 package ai.fritz.camera;
 
+
+import android.app.Activity;
+import android.os.Bundle;
+import android.util.Log;
+import com.github.barteksc.pdfviewer.PDFView;
+import com.github.barteksc.pdfviewer.listener.OnLoadCompleteListener;
+import com.github.barteksc.pdfviewer.listener.OnPageChangeListener;
+import com.github.barteksc.pdfviewer.scroll.DefaultScrollHandle;
+import com.shockwave.pdfium.PdfDocument;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -25,24 +34,28 @@ import com.ibm.watson.developer_cloud.speech_to_text.v1.websocket.BaseRecognizeC
 
 import java.io.InputStream;
 
-public class SplashActivity extends AppCompatActivity {
+import java.util.List;
 
+public class GlovesActivity extends Activity implements OnPageChangeListener,OnLoadCompleteListener{
+
+    public static final String SAMPLE_FILE = "Gloves.pdf";
+    PDFView pdfView;
+    Integer pageNumber = 0;
+    String pdfFileName;
     private boolean permissionToRecordAccepted = false;
     private static final int REQUEST_RECORD_AUDIO_PERMISSION = 200;
-    private static String TAG = "SplashActivity";
+    private static String TAG = "pdf";
     private static final int RECORD_REQUEST_CODE = 101;
     private SpeechToText speechService;
     private MicrophoneInputStream capture;
     private MicrophoneHelper microphoneHelper;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_splash);
+        setContentView(R.layout.activity_gloves);
+
         microphoneHelper = new MicrophoneHelper(this);
-
-
         int permission = ContextCompat.checkSelfPermission(this,
                 Manifest.permission.RECORD_AUDIO);
 
@@ -51,10 +64,54 @@ public class SplashActivity extends AppCompatActivity {
             makeRequest();
         }
 
+        pdfView= (PDFView)findViewById(R.id.pdfView);
+        displayFromAsset(SAMPLE_FILE);
+
         listenToSpeech();
+
     }
 
-    // Speech to Text Record Audio permission
+    private void displayFromAsset(String assetFileName) {
+        pdfFileName = assetFileName;
+
+        pdfView.fromAsset(SAMPLE_FILE)
+                .defaultPage(pageNumber)
+                .enableSwipe(true)
+
+                .swipeHorizontal(false)
+                .onPageChange(this)
+                .enableAnnotationRendering(true)
+                .onLoad(this)
+                .scrollHandle(new DefaultScrollHandle(this))
+                .load();
+    }
+
+
+    @Override
+    public void onPageChanged(int page, int pageCount) {
+        pageNumber = page;
+        setTitle(String.format("%s %s / %s", pdfFileName, page + 1, pageCount));
+    }
+
+
+    @Override
+    public void loadComplete(int nbPages) {
+        PdfDocument.Meta meta = pdfView.getDocumentMeta();
+        printBookmarksTree(pdfView.getTableOfContents(), "-");
+
+    }
+
+    public void printBookmarksTree(List<PdfDocument.Bookmark> tree, String sep) {
+        for (PdfDocument.Bookmark b : tree) {
+
+            Log.e(TAG, String.format("%s %s, p %d", sep, b.getTitle(), b.getPageIdx()));
+
+            if (b.hasChildren()) {
+                printBookmarksTree(b.getChildren(), sep + "-");
+            }
+        }
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -80,8 +137,6 @@ public class SplashActivity extends AppCompatActivity {
                 }
             }
         }
-        // if (!permissionToRecordAccepted ) finish();
-
     }
 
     protected void makeRequest() {
@@ -98,20 +153,23 @@ public class SplashActivity extends AppCompatActivity {
         //Default: https://stream.watsonplatform.net/text-to-speech/api
         speechService.setEndPoint("https://gateway-lon.watsonplatform.net/speech-to-text/api");
 
-            capture = microphoneHelper.getInputStream(true);
+        capture = microphoneHelper.getInputStream(true);
 
-            Log.d("tag", "Listen to speech in SplashActivity");
+        Log.d("tag", "Listen to speech in PDF Activity");
 
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
-                    } catch (Exception e) {
-                        showError(e);
-                    }
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    speechService.recognizeUsingWebSocket(getRecognizeOptions(capture), new MicrophoneRecognizeDelegate());
+                } catch (Exception e) {
+                    showError(e);
                 }
-            }).start();
+            }
+        }).start();
+
+        Toast.makeText(this, "Say 'go back', skip to home page.", Toast.LENGTH_SHORT).show();
+
     }
 
     //Private Methods - Speech to Text
@@ -135,10 +193,9 @@ public class SplashActivity extends AppCompatActivity {
             if(speechResults.getResults() != null && !speechResults.getResults().isEmpty()) {
                 String text = speechResults.getResults().get(0).getAlternatives().get(0).getTranscript();
                 Log.d("tag", text);
-                if (text.toLowerCase().contains("next")){
-
+                if (text.toLowerCase().contains("back")){
                     microphoneHelper.closeInputStream();
-                    welcomeToMainActivity();
+                    backToMainActivity();
                 }
             }
         }
@@ -170,20 +227,20 @@ public class SplashActivity extends AppCompatActivity {
         }
     }
 
-    private void welcomeToMainActivity() {
-        Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+    private void backToMainActivity() {
+        Intent intent = new Intent(GlovesActivity.this, MainActivity.class);
         startActivity(intent);
         finish();
-
     }
 
     private void showError(final Exception e) {
         runOnUiThread(new Runnable() {
             @Override public void run() {
-                Toast.makeText(SplashActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(GlovesActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
                 e.printStackTrace();
             }
         });
     }
 
 }
+

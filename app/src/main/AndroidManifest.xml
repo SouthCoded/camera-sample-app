@@ -26,9 +26,11 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".MainActivity"/>
-        <activity android:name=".pdf"/>
-
+        <activity android:name=".MainActivity" />
+        <activity android:name=".pdf" />
+        <activity android:name=".GlovesActivity" />
+        <activity android:name=".BottleActivity" />
+        <activity android:name=".MonitorActivity"></activity>
 
         <meta-data
             android:name="fritz_api_key"
@@ -38,6 +40,8 @@
             android:name="ai.fritz.core.FritzCustomModelService"
             android:exported="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <activity android:name=".Monitor"></activity>
     </application>
 
 </manifest>
